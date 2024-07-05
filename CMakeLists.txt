@@ -1032,3 +1032,30 @@ ADD_CUSTOM_TARGET(uninstall
 ###########################
 set_directory_properties(PROPERTIES
             ADDITIONAL_MAKE_CLEAN_FILES "install_manifest.txt")
+
+#######################
+## Score-P
+#######################
+option(ENABLE_SCOREP "Enable Score-P instrumentation" OFF)
+if(ENABLE_SCOREP)
+    include(ScorePUtilities)
+
+    set(GMX_SCOREP_ARGUMENTS "--compiler")
+    if(GMX_MPI)
+        list(APPEND GMX_SCOREP_ARGUMENTS "--mpp=mpi")
+    endif()
+    if(GMX_GPU STREQUAL CUDA)
+        list(APPEND GMX_SCOREP_ARGUMENTS "--cuda")
+    elseif(GMX_GPU STREQUAL OpenCL)
+        list(APPEND GMX_SCOREP_ARGUMENTS "--opencl")
+    endif()
+    if(GMX_OPENMP)
+        list(APPEND GMX_SCOREP_ARGUMENTS "--thread=omp:ompt")
+    endif()
+
+    scorep_arguments2components("${GMX_SCOREP_ARGUMENTS}" CXX scorep_components)
+    scorep_infer_components(CXX scorep_inferred_components)
+    list(APPEND scorep_components ${scorep_inferred_components})
+    find_package(ScoreP REQUIRED COMPONENTS ${scorep_components})
+    scorep_instrument(DIRECTORIES src LANGS CXX ARGUMENTS ${GMX_SCOREP_ARGUMENTS})
+endif()

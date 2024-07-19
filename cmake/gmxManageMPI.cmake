@@ -94,7 +94,7 @@ if (GMX_LIB_MPI)
     endif ()
     #TODO(#3672, #3776): These should be acquired through the MPI::MPI_CXX target.
     include_directories(SYSTEM ${MPI_CXX_INCLUDE_PATH})
-    list(APPEND GMX_COMMON_LIBRARIES ${MPI_CXX_LIBRARIES})
+    list(APPEND GMX_COMMON_LIBRARIES ${MPI_CXX_LIBRARIES} MPI::MPI_CXX)
 endif ()
 
 # Identify particular MPI implementations of interest (for compatibility checks).

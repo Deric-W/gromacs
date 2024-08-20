@@ -1032,3 +1032,64 @@ ADD_CUSTOM_TARGET(uninstall
 ###########################
 set_directory_properties(PROPERTIES
             ADDITIONAL_MAKE_CLEAN_FILES "install_manifest.txt")
+
+#######################
+## Score-P
+#######################
+option(ENABLE_SCOREP "Enable Score-P instrumentation" OFF)
+if(ENABLE_SCOREP)
+    include(ScorePUtilities)
+
+    set(scorepArguments "--compiler")
+    if(GMX_OPENMP)
+        list(APPEND scorepArguments "--thread=omp:ompt")
+    endif()
+    if(GMX_MPI)
+        list(APPEND scorepArguments "--mpp=mpi")
+    endif()
+    if(GMX_GPU STREQUAL "CUDA")
+        list(APPEND scorepArguments "--cuda")
+    elseif(GMX_GPU STREQUAL "OpenCL")
+        list(APPEND scorepArguments "--opencl")
+    endif()
+
+    scorep_arguments2components("${scorepArguments}" CXX scorepComponents)
+    scorep_infer_components(CXX inferredComponents)
+    list(APPEND scorepComponents ${inferredComponents})
+    list(REMOVE_DUPLICATES scorepComponents)
+    find_package(ScoreP REQUIRED COMPONENTS ${scorepComponents})
+
+    scorep_discover_targets(targets src api)
+    set(targetsToInstrument "")
+    foreach(target ${targets})
+        if(NOT target MATCHES "test")
+            list(APPEND targetsToInstrument "${target}")
+        endif()
+    endforeach()
+    scorep_instrument("${targetsToInstrument}" LANGS CXX ARGUMENTS ${scorepArguments})
+
+     # workaround for Score-P bug
+    set_property(TARGET libgromacs PROPERTY CXX_LINKER_LAUNCHER)
+    set_property(TARGET libgromacs PROPERTY CXX_COMPILER_LAUNCHER)
+    execute_process(
+        COMMAND "${SCOREP_CONFIG_EXECUTABLE}" ${scorepArguments} --ldflags
+        OUTPUT_VARIABLE ldflags
+        COMMAND_ERROR_IS_FATAL ANY
+    )
+    execute_process(
+        COMMAND "${SCOREP_CONFIG_EXECUTABLE}" ${scorepArguments} --event-libs
+        OUTPUT_VARIABLE eventLibs
+        COMMAND_ERROR_IS_FATAL ANY
+    )
+    execute_process(
+        COMMAND "${SCOREP_CONFIG_EXECUTABLE}" ${scorepArguments} --mgmt-libs
+        OUTPUT_VARIABLE mgmtLibs
+        COMMAND_ERROR_IS_FATAL ANY
+    )
+    string(REGEX REPLACE "[     ]+" ";" ldflags "${ldflags}")
+    string(REGEX REPLACE "[     ]+" ";" eventLibs "${eventLibs}")
+    string(REGEX REPLACE "[     ]+" ";" mgmtLibs "${mgmtLibs}")
+    target_link_options(libgromacs BEFORE PRIVATE ${ldflags})
+    target_link_libraries(libgromacs PRIVATE ${eventLibs})
+    target_link_libraries(libgromacs PRIVATE ${mgmtLibs})
+endif()

@@ -1053,12 +1053,67 @@ if(ENABLE_SCOREP)
     	# prevent Opari2 instrumentation
     	scorep_mark(INSTRUMENT "${targetsToInstrument}" LANGS CXX ARGUMENTS "--compiler" "--thread=omp:ompt" AUTO)
     else()
-    	scorep_mark(INSTRUMENT "${targetsToInstrument}" LANGS CXX ARGUMENTS "--compiler"  AUTO)
+    	scorep_mark(INSTRUMENT "${targetsToInstrument}" LANGS CXX ARGUMENTS "--compiler" AUTO)
     endif()
     scorep_determine_instrumentations("${allTargets}" COMPONENTS_VAR scorepComponents)
     scorep_infer_components(CXX inferredComponents)
     list(APPEND scorepComponents ${inferredComponents})
     list(REMOVE_DUPLICATES scorepComponents)
     find_package(ScoreP REQUIRED COMPONENTS ${scorepComponents})
+
+    # workaround for Score-P bug
+    set_property(TARGET libgromacs PROPERTY SCOREP_LANGUAGES "")
+    execute_process(
+        COMMAND "${SCOREP_CONFIG_EXECUTABLE}"
+        --thread=omp:ompt
+        --mpp=mpi
+        --io=linktime:posix
+        --nocuda
+        --noopencl
+        --noopenacc
+        --memory=libc
+        --nokokkos
+        --nohip
+        --ldflags
+        OUTPUT_VARIABLE ldflags
+        COMMAND_ERROR_IS_FATAL ANY
+    )
+    execute_process(
+        COMMAND "${SCOREP_CONFIG_EXECUTABLE}"
+        --thread=omp:ompt
+        --mpp=mpi
+        --io=linktime:posix
+        --nocuda
+        --noopencl
+        --noopenacc
+        --memory=libc
+        --nokokkos
+        --nohip
+        --event-libs
+        OUTPUT_VARIABLE eventLibs
+        COMMAND_ERROR_IS_FATAL ANY
+    )
+    execute_process(
+        COMMAND "${SCOREP_CONFIG_EXECUTABLE}"
+        --thread=omp:ompt
+        --mpp=mpi
+        --io=linktime:posix
+        --nocuda
+        --noopencl
+        --noopenacc
+        --memory=libc
+        --nokokkos
+        --nohip
+        --mgmt-libs
+        OUTPUT_VARIABLE mgmtLibs
+        COMMAND_ERROR_IS_FATAL ANY
+    )
+    string(REGEX REPLACE "[     ]+" ";" ldflags "${ldflags}")
+    string(REGEX REPLACE "[     ]+" ";" eventLibs "${eventLibs}")
+    string(REGEX REPLACE "[     ]+" ";" mgmtLibs "${mgmtLibs}")
+    target_link_options(libgromacs BEFORE PRIVATE ${ldflags})
+    target_link_libraries(libgromacs PRIVATE ${eventLibs})
+    target_link_libraries(libgromacs PRIVATE ${mgmtLibs})
+
     scorep_enable("${allTargets}")
 endif()

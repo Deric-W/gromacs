@@ -1060,51 +1060,24 @@ if(ENABLE_SCOREP)
     list(APPEND scorepComponents ${inferredComponents})
     list(REMOVE_DUPLICATES scorepComponents)
     find_package(ScoreP REQUIRED COMPONENTS ${scorepComponents})
+    scorep_enable("${allTargets}")
 
     # workaround for Score-P bug
-    set_property(TARGET libgromacs PROPERTY SCOREP_LANGUAGES "")
+    get_target_property(scorepArguments libgromacs SCOREP_CXX_ARGUMENTS)
+    set_property(TARGET libgromacs PROPERTY CXX_LINKER_LAUNCHER)
+    set_property(TARGET libgromacs PROPERTY CXX_COMPILER_LAUNCHER)
     execute_process(
-        COMMAND "${SCOREP_CONFIG_EXECUTABLE}"
-        --thread=omp:ompt
-        --mpp=mpi
-        --io=linktime:posix
-        --nocuda
-        --noopencl
-        --noopenacc
-        --memory=libc
-        --nokokkos
-        --nohip
-        --ldflags
+        COMMAND "${SCOREP_CONFIG_EXECUTABLE}" ${scorepArguments} --ldflags
         OUTPUT_VARIABLE ldflags
         COMMAND_ERROR_IS_FATAL ANY
     )
     execute_process(
-        COMMAND "${SCOREP_CONFIG_EXECUTABLE}"
-        --thread=omp:ompt
-        --mpp=mpi
-        --io=linktime:posix
-        --nocuda
-        --noopencl
-        --noopenacc
-        --memory=libc
-        --nokokkos
-        --nohip
-        --event-libs
+        COMMAND "${SCOREP_CONFIG_EXECUTABLE}" ${scorepArguments} --event-libs
         OUTPUT_VARIABLE eventLibs
         COMMAND_ERROR_IS_FATAL ANY
     )
     execute_process(
-        COMMAND "${SCOREP_CONFIG_EXECUTABLE}"
-        --thread=omp:ompt
-        --mpp=mpi
-        --io=linktime:posix
-        --nocuda
-        --noopencl
-        --noopenacc
-        --memory=libc
-        --nokokkos
-        --nohip
-        --mgmt-libs
+        COMMAND "${SCOREP_CONFIG_EXECUTABLE}" ${scorepArguments} --mgmt-libs
         OUTPUT_VARIABLE mgmtLibs
         COMMAND_ERROR_IS_FATAL ANY
     )
@@ -1114,6 +1087,4 @@ if(ENABLE_SCOREP)
     target_link_options(libgromacs BEFORE PRIVATE ${ldflags})
     target_link_libraries(libgromacs PRIVATE ${eventLibs})
     target_link_libraries(libgromacs PRIVATE ${mgmtLibs})
-
-    scorep_enable("${allTargets}")
 endif()

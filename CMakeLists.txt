@@ -1065,7 +1065,6 @@ if(ENABLE_SCOREP)
     # workaround for Score-P bug
     get_target_property(scorepArguments libgromacs SCOREP_CXX_ARGUMENTS)
     set_property(TARGET libgromacs PROPERTY CXX_LINKER_LAUNCHER)
-    set_property(TARGET libgromacs PROPERTY CXX_COMPILER_LAUNCHER)
     execute_process(
         COMMAND "${SCOREP_CONFIG_EXECUTABLE}" ${scorepArguments} --ldflags
         OUTPUT_VARIABLE ldflags
